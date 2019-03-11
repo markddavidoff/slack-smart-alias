@@ -161,9 +161,7 @@ class SlackOnCall(object):
         """
         users = set()
 
-        if not settings.ROTATE_WEEKEND_ONCALL:
-            oncalls = settings.WEEKDAY_ROTATION[weekday]
-        elif weekday < 5:
+        if not settings.ROTATE_WEEKEND_ONCALL or weekday < 5:
             oncalls = settings.WEEKDAY_ROTATION[weekday]
         else:   # set a param that stores the index of the last on-call
             eng_list = list(settings.People)
