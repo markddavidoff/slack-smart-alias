@@ -31,7 +31,7 @@ In production, `serverless` loads env vars from [AWS Secrets Manager](https://us
   in [Setup Slack](#setup-slack). Needs the Slack permissions: `usergroups:read`, `usergroups:write`, `users:read`, 
   `users:read.email`, `users.profile:read`
  - `GOOGLE_SERVICE_ACCOUNT_KEYFILE` - The json dict of the keyfile for the [service account](https://developers.google.com/api-client-library/python/auth/service-accounts)
- to use for Google Cal.
+ to use for Google Cal. You will also need to share the calendar with the email of the service account with write perms
 
 For production:
  - Add the key to Parameter Store/Secrets Manager and then update the path for the variable under 
