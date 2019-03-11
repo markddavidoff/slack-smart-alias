@@ -1,52 +1,29 @@
 #!/usr/bin/env python
 # Adapted from https://gist.github.com/devdazed/473ab227c323fb01838f
-import boto3
-import dateutil.tz
 import json
 import logging
-import math
-import os
-
-from base64 import b64decode
 from datetime import datetime
-from enum import Enum, unique
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+import dateutil.tz
+
+import boto3
+
+
+import settings
 
 # todo set this up with serverless
 log = logging.getLogger(__name__)
-ARN_ID = "arn:aws:lambda:us-west-1:<your lambda id>:function:update-slack-oncall"
-
-@unique
-class Engineers(Enum):
-    engineer1 = ('email@email.com', 1234567890)
-    engineer2 = ('email@email.com', 1234567890)
-    engineer3 = ('email@email.com', 1234567890)
-    engineer4 = ('email@email.com', 1234567890)
-    engineer5 = ('email@email.com', 1234567890)
-    engineer6 = ('email@email.com', 1234567890)
-    
-# this is hardcoded because everyone has day preferences
-WEEKDAY_ROTA = [[Engineers.engineer1, Engineers.engineer2],
-                [Engineers.engineer1, Engineers.engineer3, Engineers.engineer4],
-                [Engineers.engineer5, Engineers.engineer6, Engineers.engineer4],
-                [Engineers.engineer2, Engineers.engineer3],
-                [Engineers.engineer5, Engineers.engineer6]]
 
 
 class SlackOnCall(object):
-    # The Slack API token to use for authentication to the Slack WebAPI
-    # Needs the Slack permissions: usergroups:read, usergroups:write, users:read, users:read.email, users.profile:read
-    slack_token = None
-    
-    # The Slack @user-group to update (Default: oncall)
-    slack_user_group_handle = 'oncall'
 
-    def __init__(self, slack_token,
-                 slack_user_group_handle=slack_user_group_handle,
+    def __init__(self,
+                 slack_token,
+                 slack_user_group_handle,
                  log_level='INFO'):
        
-        self.slack_token = slack_token.decode('utf-8')
+        self.slack_token = slack_token
         self.slack_user_group_handle = slack_user_group_handle
 
         self._slack_user_group = None
@@ -76,6 +53,7 @@ class SlackOnCall(object):
         log.info('Job Complete')
 
     def _make_request(self, url, body=None, headers={}):
+        #  TODO: now that we have serverless we can re-write this archaic dodo with requests
         headers['Authorization'] = f'Bearer {self.slack_token}'
         req = Request(url, body, headers)
         log.info('Making request to %s', url)
@@ -113,8 +91,9 @@ class SlackOnCall(object):
 
     @property
     def on_call_email_addresses(self):
+        # todo rename oncall to in_rotation
         """
-        Uses WEEKDAY_ROTA on weekdays, otherwise rotates the on-call in pairs
+        Uses WEEKDAY_ROTATION on weekdays, otherwise uses the week number
         based on the index stored in the last_oncall_index tag
         :return: All on-call email addresses
         """
@@ -123,28 +102,32 @@ class SlackOnCall(object):
 
         users = set()  # users can be in multiple schedule, this will de-dupe
 
-        today = datetime.now(dateutil.tz.gettz('US/Pacific'))
-        weekday = today.weekday()
-        day_of_month = today.day
-        
+        today = datetime.now(dateutil.tz.gettz(settings.TIMEZONE))
+        weekday = today.weekday()  # Monday is 0 and Sunday is 6
+
         if weekday < 5:
-            oncalls = WEEKDAY_ROTA[weekday]
+            people_in_rotation = settings.WEEKDAY_ROTATION[weekday]
         else:
-            eng_list = list(Engineers)
-            client = boto3.client('lambda')
-            tags = client.list_tags(
-                Resource=ARN_ID
-            )
-            oncall_index = int(tags['Tags']['last_oncall_index']) # int((day_of_month-1)/7)
-            oncall_index = oncall_index % math.ceil(len(eng_list)/2)
-            client.tag_resource(Resource=ARN_ID,
-                        Tags={'last_oncall_index': str(oncall_index + 1)}
-            )
+            week_num = today.isocalendar()[1]
+            people_in_rotation = settings.WEEKDAY_ROTATION[week_num % len(settings.WEEKDAY_ROTATION)]
+
+            # todo what does this do again? this is some fancy stuff for weekends? turning it off for now...
+            # day_of_month = today.day
+            # eng_list = list(Engineers)
+            # client = boto3.client('lambda')
+            # tags = client.list_tags(
+            #     Resource=ARN_ID
+            # )
+            # oncall_index = int(tags['Tags']['last_oncall_index']) # int((day_of_month-1)/7)
+            # oncall_index = oncall_index % math.ceil(len(eng_list)/2)
+            # client.tag_resource(Resource=ARN_ID,
+            #             Tags={'last_oncall_index': str(oncall_index + 1)}
+            # )
+            #
+            # oncalls = eng_list[oncall_index*2:oncall_index*2+2]
             
-            oncalls = eng_list[oncall_index*2:oncall_index*2+2]
-            
-        for oncall in oncalls:
-            users.add(oncall.value[0])
+        for peep in people_in_rotation:
+            users.add(peep.value)
 
         log.info('Found %d users on-call', len(users))
         self._on_call_email_addresses = users
@@ -152,6 +135,7 @@ class SlackOnCall(object):
 
     @property
     def all_slack_users(self):
+        # todo: make this a model we can use so we don't have to check the slack docs all the time
         if self._all_slack_users is not None:
             return self._all_slack_users
 
@@ -190,27 +174,9 @@ class SlackOnCall(object):
         self._make_request(url)
 
 
-def lambda_handler(*_):
-    """
-    Main entry point for AWS Lambda.
+def handler(event, context):
 
-    Variables can not be passed in to AWS Lambda, the configuration
-    parameters below are encrypted using AWS IAM Keys.
-    
-    You can set up a CloudWatch Event cron trigger to run this (we have it set for everyday at 7am UTC,
-    which will be one hour off half the year, but whatever)
-    """
-
-    # To generate the encrypted values, go to AWS IAM Keys and Generate a key
-    # Then grant decryption using the key to the IAM Role used for your lambda
-    # function.
-    #
-    # Use the command `aws kms encrypt --key-id alias/<key-alias> --plaintext <value-to-encrypt>
-    # Put the encrypted value in the configuration dictionary below
-    encrypted_config = {
-        'slack_token': '<encrypted slack app oauth token>',
-    }
-
-    kms = boto3.client('kms')
-    config = {x: kms.decrypt(CiphertextBlob=b64decode(y))['Plaintext'] for x, y in iter(encrypted_config.items())}
-    return SlackOnCall(**config).run()
+    return SlackOnCall(
+        slack_token=settings.SLACK_API_TOKEN,
+        slack_user_group_handle=settings.ALIAS_NAME
+    ).run()

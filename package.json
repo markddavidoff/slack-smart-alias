@@ -1,0 +1,10 @@
+{
+  "name": "notifications",
+  "description": "",
+  "version": "0.1.0",
+  "dependencies": {},
+  "devDependencies": {
+    "serverless-local-schedule": "^0.1.6",
+    "serverless-python-requirements": "^4.3.0"
+  }
+}

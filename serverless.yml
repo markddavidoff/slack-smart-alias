@@ -1,0 +1,75 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: slack-smart-alias
+
+
+custom:
+  # strictly define the stages to be only dev and prod.
+  currentEnvironment:
+    prod: "prod"
+    dev: "dev"
+  pythonRequirements:
+    # where the magic of serverless-python-requirements happens
+    dockerizePip: true
+
+provider:
+  name: aws
+  runtime: python3.7
+  # don't need a dev stage for this as its not a customer facing feature.
+  # if you want prod and dev stages use$ {self:custom.currentEnvironment.${opt:stage, "dev"}}
+  stage: prod
+  # set to whatever region you want, we used `us-west-1`
+  region: <configure-me>
+  # profile from ~/.aws/credentials you want to use to deploy with
+  profile: <configure-me>
+  environment:
+    stage: ${self:provider.stage}
+    # Slack API token this lambda uses to access slack
+    # for Parameter Store parameters use: ${ssm:/name_key_of_secret_in_param_store~true}
+    # for AWS Secrets Manager use: ${ssm:/aws/reference/secretsmanager/secret_ID_in_Secrets_Manager~true}
+    # for example we use: ${ssm:/SLACK_SMART_ALIAS_SLACK_API_TOKEN~true}
+    SLACK_SMART_ALIAS_SLACK_API_TOKEN: <configure-me>
+
+functions:
+  set_alias:
+    handler: set_alias.handler
+    events:
+      # uses cloudwatch events as a cron
+      - schedule:
+          # set the cron schedule for how often you want the lambda to run.
+          # uses aws cron expressions from here:
+          # https://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-schedule-expressions.html
+          #
+          # examples:
+          # every 5 minutes: rate(5 minutes)
+          # 10:15 AM (UTC) every day:  cron(15 10 * * ? *)
+          #
+          # Note, thanks to the serverless-local-schedule plugin these can be in local time in whatever timezone
+          # you set at `timezone:` here.
+          # Note, if you set a cron day of week and you want the days to also be in your local timezone, use the names
+          # of days like `MON`  in your cron instead of the numbers like `1`
+          rate: <configure-me>
+          # todo dedup timezone when we move settings to a yml
+          timezone: America/Los_Angeles
+          enabled: true
+package:
+  exclude:
+    - tests/**
+    - .pytest_cache/**
+    - .test_venv/**
+    - __pycache__/**
+
+plugins:
+  - serverless-python-requirements
+  - serverless-local-schedule
