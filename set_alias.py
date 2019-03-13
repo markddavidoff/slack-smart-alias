@@ -37,7 +37,7 @@ class SlackOnCall(object):
 
         self._slack_user_group = None
         self._all_slack_users = None
-        self.google_keyfile = json.loads(keyfile)
+        self.google_keyfile = json.loads(keyfile) if keyfile else None
         self.google_calendar_id = gcal_id
         self.arn = arn
         self.days_ahead = int(days_ahead)
