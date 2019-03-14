@@ -93,8 +93,7 @@ on your behalf.
 
 If you already have the `awscli` installed locally:
   - If you have profile configured and setup in `~/.aws/credentials`, you're good to go.
-  - If you don't have a profile setup you can use the [serverless config credentials](https://serverless
- .com/framework/docs/providers/aws/guide/credentials#setup-with-serverless-config-credentials-command) command to 
+  - If you don't have a profile setup you can use the [serverless config credentials](https://serverless.com/framework/docs/providers/aws/guide/credentials#setup-with-serverless-config-credentials-command) command to 
 set one up for you
 
 Else, read the [serverless aws setup docs](https://serverless.com/framework/docs/providers/aws/guide/credentials/)
