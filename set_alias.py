@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Adapted from https://gist.github.com/devdazed/473ab227c323fb01838f
 from __future__ import print_function
-import boto3
 import dateutil.tz
 import json
 import logging
@@ -112,8 +111,8 @@ class SlackOnCall(object):
 
         attendees = []
         for user in users:
-            attendees.append({'email': user.value[0]})
-            desc_str += f'{user.name} ({user.value[0]}, {user.value[1]})\n'
+            attendees.append({'email': user.value.email})
+            desc_str += f'{user.name} ({user.value.email}, {user.value.phone})\n'
 
         event = {
             "summary": f"On-Call {users_str}",
@@ -190,7 +189,7 @@ class SlackOnCall(object):
         :return: List of Slack user objects found in :emails:
         """
         users = []
-        emails = set([x.value[0] for x in engs])
+        emails = set([x.value.email for x in engs])
         for user in self.all_slack_users:
             if user['profile'].get('email') in emails:
                 users.append(user)

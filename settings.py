@@ -7,12 +7,18 @@ from enum import unique, Enum
 
 STAGE = os.environ['stage']
 
+
+class Person:
+    def __init__(self, email, phone):
+        self.email = email
+        self.phone = phone
+
+
 @unique
 class People(Enum):
     """
     <configure-me>
-    person1 = ('email1@email.com', phonenumber1)
-    person2 = ('email2@email.com', phonenumber2)
+    ex.- john_smith = Person('john@john.john', 1234567890)
     """
 
 
