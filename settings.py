@@ -29,7 +29,7 @@ MON, TUE, WED, THU, FRI, SAT, SUN = range(7)
 # <configure-me>
 WEEKDAY_ROTATION = {
     # Monday
-    MON: [],
+    MON: [],  # ex: [People.person1, People.person2],
     # Tuesday
     TUE: [],
     # Wednesday
