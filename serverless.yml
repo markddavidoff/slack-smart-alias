@@ -13,7 +13,6 @@
 
 service: slack-smart-alias
 
-
 custom:
   # strictly define the stages to be only dev and prod.
   currentEnvironment:
@@ -33,6 +32,8 @@ provider:
   region: <configure-me>
   # profile from ~/.aws/credentials you want to use to deploy with
   profile: <configure-me>
+  # timeout in seconds (defaults to 6)
+  timeout: <configure-me>
   environment:
     stage: ${self:provider.stage}
     # Slack API token this lambda uses to access slack
@@ -40,6 +41,7 @@ provider:
     # for AWS Secrets Manager use: ${ssm:/aws/reference/secretsmanager/secret_ID_in_Secrets_Manager~true}
     # for example we use: ${ssm:/SLACK_SMART_ALIAS_SLACK_API_TOKEN~true}
     SLACK_SMART_ALIAS_SLACK_API_TOKEN: <configure-me>
+    GOOGLE_SERVICE_ACCOUNT_KEYFILE: <configure-me>
 
 functions:
   set_alias:

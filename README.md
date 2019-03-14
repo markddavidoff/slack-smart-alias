@@ -14,7 +14,7 @@ git clone git@github.com:markddavidoff/slack-smart-alias.git
 #### Install python requirements
 Make sure you have python 3.7 (or downgrade the `runtime` setting in `serverless.yml` to your version)
 ```bash
-pip install -r requirements.t
+pip install -r requirements.txt
 ```
 
 ## Setup Slack
@@ -33,10 +33,13 @@ In production, `serverless` loads env vars from [AWS Secrets Manager](https://us
  - `SLACK_SMART_ALIAS_SLACK_API_TOKEN` - The Slack API token to use for authentication to the Slack WebAPI you set up
   in [Setup Slack](#setup-slack). Needs the Slack permissions: `usergroups:read`, `usergroups:write`, `users:read`, 
   `users:read.email`, `users.profile:read`
+ - `GOOGLE_SERVICE_ACCOUNT_KEYFILE` - The json dict of the keyfile for the [service account](https://developers.google.com/api-client-library/python/auth/service-accounts)
+ to use for Google Cal. You will also need to share the calendar with the email of the service account with write perms
 
 For production:
  - Add the key to Parameter Store/Secrets Manager and then update the path for the variable under 
  `provider>environment>[var name]` in  `serverless.yml` as described in [serverless variable docs](https://serverless.com/framework/docs/providers/aws/guide/variables/)
+ 
 When running locally:
  - Just load config to a local env var such as with `export [var name]=[var value]` before running.
 
