@@ -36,6 +36,7 @@ In production, `serverless` loads env vars from [AWS Secrets Manager](https://us
 For production:
  - Add the key to Parameter Store/Secrets Manager and then update the path for the variable under 
  `provider>environment>[var name]` in  `serverless.yml` as described in [serverless variable docs](https://serverless.com/framework/docs/providers/aws/guide/variables/)
+ 
 When running locally:
  - Just load config to a local env var such as with `export [var name]=[var value]` before running.
 

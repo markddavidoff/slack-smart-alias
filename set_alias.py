@@ -8,7 +8,6 @@ import logging
 import math
 import requests
 
-from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
 from google.oauth2 import service_account
 from googleapiclient import discovery
@@ -17,9 +16,6 @@ import settings
 
 # todo set this up with serverless
 log = logging.getLogger(__name__)
-
-KMS = boto3.client('kms')
-SSM = boto3.client('ssm')
 
 
 class SlackOnCall(object):
@@ -53,19 +49,19 @@ class SlackOnCall(object):
         today = datetime.now(dateutil.tz.gettz(settings.TIMEZONE)).replace(hour=0, minute=0)
 
         weekday = today.weekday()
-        oncalls = self.get_on_call_engs(weekday)
+        weeknum = today.isocalendar()[1]
+
+        oncalls = self.get_on_call_engs(weekday, weeknum)
         slack_users = self.slack_users_by_email(oncalls)
         if not slack_users:
             log.warning('No Slack users found for email addresses: {0}'.format(','.join(oncalls)))
             return
 
-        # self.backfill_calendar_events(today, settings.DAYS_AHEAD)
-
         if settings.GOOGLE_CAL_ID:
             # set on-call calendar event for the future
             the_future = today + timedelta(days=self.days_ahead)
             weekday = the_future.weekday()
-            oncalls = self.get_on_call_engs(weekday)
+            oncalls = self.get_on_call_engs(weekday, weeknum)
             self.set_calendar_event(oncalls, the_future)
 
         # update slack oncall
@@ -92,8 +88,9 @@ class SlackOnCall(object):
         for x in range(num_days):
             the_day = start_date + timedelta(days=x)
             weekday = the_day.weekday()
+            weeknum = the_day.isocalendar()[1]
 
-            oncalls = self.get_on_call_engs(weekday)
+            oncalls = self.get_on_call_engs(weekday, weeknum)
             if weekday < 6:
                 self.set_calendar_event(oncalls, the_day)
 
@@ -153,9 +150,9 @@ class SlackOnCall(object):
 
         raise ValueError(f'No user groups found that match {self.slack_user_group_handle}')
 
-    def get_on_call_engs(self, weekday):
+    def get_on_call_engs(self, weekday, weeknum):
         """
-        Uses WEEKDAY_ROTA on weekdays, otherwise rotates the on-call in pairs
+        Uses WEEKDAY_ROTATION on weekdays, otherwise rotates the on-call in pairs
         based on the index stored in the last_oncall_index tag
         :return: All on-call email addresses
         """
@@ -165,19 +162,7 @@ class SlackOnCall(object):
             oncalls = settings.WEEKDAY_ROTATION[weekday]
         else:   # set a param that stores the index of the last on-call
             eng_list = list(settings.People)
-            try:
-                oncall_index = int(SSM.get_parameter(Name='/oncall/last_oncall_index',
-                                                     WithDecryption=False)['Parameter']['Value'])
-            except ClientError:
-                oncall_index = 0
-
-            oncall_index = oncall_index % math.ceil(len(eng_list) / 2)
-            if weekday == 6:    # only increment once per weekend so we have the same pair
-                SSM.put_parameter(Name='/oncall/last_oncall_index',
-                                  Value=str(oncall_index + 1),
-                                  Overwrite=True,
-                                  Type='String')
-
+            oncall_index = weeknum % math.ceil(len(eng_list) / 2)
             oncalls = eng_list[oncall_index * 2:oncall_index * 2 + 2]
 
         for oncall in oncalls:
