@@ -61,7 +61,8 @@ class SlackOnCall(object):
             the_future = today + timedelta(days=self.days_ahead)
             weekday = the_future.weekday()
             oncalls = self.get_on_call_engs(weekday, weeknum)
-            self.set_calendar_event(oncalls, the_future)
+            if weekday < 6:
+                self.set_calendar_event(oncalls, the_future)
 
         # update slack oncall
         slack_user_ids = [u['id'] for u in slack_users]
